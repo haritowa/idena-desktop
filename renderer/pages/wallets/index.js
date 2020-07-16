@@ -1,3 +1,4 @@
+import HideDestructiveElements from '../../shared/nondestructive'
 import React, {useEffect} from 'react'
 import {FiChevronRight} from 'react-icons/fi'
 import {useTranslation} from 'react-i18next'
@@ -44,6 +45,7 @@ export default function Index() {
 
   return (
     <Layout syncing={syncing} offline={offline}>
+      <HideDestructiveElements>
       <Box px={theme.spacings.xxxlarge} py={theme.spacings.large}>
         <PageTitle>{t('Wallets')}</PageTitle>
         <Box>
@@ -146,6 +148,7 @@ export default function Index() {
           />
         </Drawer>
       </Box>
+      </HideDestructiveElements>
     </Layout>
   )
 }

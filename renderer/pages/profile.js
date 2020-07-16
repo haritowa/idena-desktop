@@ -1,3 +1,4 @@
+import HideDestructiveElements from '../shared/nondestructive'
 import React from 'react'
 import {Stack, Box, Text, Icon, useDisclosure, useToast} from '@chakra-ui/core'
 import {useTranslation} from 'react-i18next'
@@ -104,6 +105,7 @@ export default function ProfilePage() {
           <Stack isInline spacing={10}>
             <Stack spacing={6}>
               <UserInlineCard address={address} state={state} />
+              <HideDestructiveElements>
               <UserStatList>
                 <SimpleUserStat label={t('Address')} value={address} />
                 {state === IdentityStatus.Newbie ? (
@@ -184,16 +186,20 @@ export default function ProfilePage() {
                   </AnnotatedUserStat>
                 )}
               </UserStatList>
+              </HideDestructiveElements>
               <ActivateInviteForm />
             </Stack>
             <Box w={rem(200)}>
+              <HideDestructiveElements>
               {canMine && (
                 <Text fontWeight={500} mt={4} mb={2}>
                   {t('Online mining status')}
                 </Text>
               )}
               <MinerStatusSwitcher />
+              </HideDestructiveElements>
               <Stack mt={canMine ? 0 : rem(104)} spacing={1} align="flex-start">
+                <HideDestructiveElements>
                 <IconLink
                   href="/contacts/new-invite"
                   isDisabled={invitesCount === 0}
@@ -201,12 +207,14 @@ export default function ProfilePage() {
                 >
                   {t('Invite')}
                 </IconLink>
+                </HideDestructiveElements>
                 <IconLink
                   href="/flips/new"
                   icon={<Icon name="photo" size={5} />}
                 >
                   {t('New flip')}
                 </IconLink>
+                <HideDestructiveElements>
                 <IconButton2 icon="poo" onClick={onOpenSpoilForm}>
                   {t('Spoil invite')}
                 </IconButton2>
@@ -217,10 +225,12 @@ export default function ProfilePage() {
                 >
                   {t('Terminate')}
                 </IconButton2>
+                </HideDestructiveElements>
               </Stack>
             </Box>
           </Stack>
 
+          <HideDestructiveElements>
           <KillIdentityDrawer
             address={address}
             isOpen={isOpenKillForm}
@@ -228,7 +238,8 @@ export default function ProfilePage() {
           >
             <KillForm onSuccess={onCloseKillForm} onFail={onCloseKillForm} />
           </KillIdentityDrawer>
-
+          </HideDestructiveElements>
+          <HideDestructiveElements>
           <SpoilInviteDrawer
             isOpen={isOpenSpoilForm}
             onClose={onCloseSpoilForm}
@@ -260,6 +271,7 @@ export default function ProfilePage() {
               }}
             />
           </SpoilInviteDrawer>
+          </HideDestructiveElements>
 
           {showValidationResults && (
             <ValidationResultToast epoch={epoch.epoch} />

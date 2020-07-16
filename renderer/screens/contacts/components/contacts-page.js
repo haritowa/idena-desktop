@@ -1,3 +1,4 @@
+import HideDestructiveElements from '../../../shared/nondestructive'
 import React from 'react'
 import PropTypes from 'prop-types'
 import {FiUsers} from 'react-icons/fi'
@@ -32,6 +33,7 @@ function ContactsPage({showNewInviteForm = false}) {
   return (
     <ContactProvider>
       <Layout syncing={syncing} offline={offline} loading={loading}>
+        <HideDestructiveElements>
         <Flex>
           <Sidebar
             onSelectContact={setSelectedContact}
@@ -90,6 +92,7 @@ function ContactsPage({showNewInviteForm = false}) {
             />
           </SendInviteDrawer>
         </Flex>
+        </HideDestructiveElements>
       </Layout>
     </ContactProvider>
   )
