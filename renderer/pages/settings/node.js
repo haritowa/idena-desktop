@@ -1,5 +1,6 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
+import HideDestructiveElements from '../../shared/nondestructive'
 import React, {useEffect, useReducer, useRef, useState} from 'react'
 import {margin, padding, borderRadius} from 'polished'
 import {useTranslation} from 'react-i18next'
@@ -127,6 +128,7 @@ function NodeSettings() {
 
   return (
     <SettingsLayout>
+      <HideDestructiveElements>
       <Box py={theme.spacings.xlarge}>
         <Flex align="center">
           <Box>
@@ -300,6 +302,7 @@ function NodeSettings() {
           </div>
         </div>
       )}
+      </HideDestructiveElements>
     </SettingsLayout>
   )
 }

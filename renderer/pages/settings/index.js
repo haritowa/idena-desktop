@@ -1,3 +1,4 @@
+import HideDestructiveElements from '../../shared/nondestructive'
 import React from 'react'
 import {margin} from 'polished'
 import QRCode from 'qrcode.react'
@@ -42,6 +43,7 @@ function Settings() {
   const {runInternalNode, useExternalNode} = useSettingsState()
   return (
     <SettingsLayout>
+      <HideDestructiveElements>
       {global.isDev && (
         <>
           <Section title={t('Flips')}>
@@ -82,6 +84,7 @@ function Settings() {
       )}
       <ExportPK />
       {runInternalNode && !useExternalNode && <ImportPK />}
+      </HideDestructiveElements>
       <LocaleSwitcher />
     </SettingsLayout>
   )

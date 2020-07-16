@@ -1,3 +1,4 @@
+import HideDestructiveElements from '../nondestructive'
 import React from 'react'
 import PropTypes from 'prop-types'
 import {useRouter} from 'next/router'
@@ -162,24 +163,28 @@ function Nav() {
         >
           {t('My Idena') || nickname}
         </NavItem>
+        <HideDestructiveElements>
         <NavItem
           href="/wallets"
           icon={<i className="icon icon--menu_wallets" />}
         >
           {t('Wallets')}
         </NavItem>
+        </HideDestructiveElements>
         <NavItem
           href="/flips/list"
           icon={<i className="icon icon--menu_gallery" />}
         >
           {t('Flips')}
         </NavItem>
+        <HideDestructiveElements>
         <NavItem
           href="/contacts"
           icon={<i className="icon icon--menu_contacts" />}
         >
           {t('Contacts')}
         </NavItem>
+        </HideDestructiveElements>
         <NavItem href="/settings" icon={<i className="icon icon--settings" />}>
           {t('Settings')}
         </NavItem>
@@ -274,6 +279,7 @@ function ActionPanel() {
       {currentPeriod !== EpochPeriod.None && (
         <Block title={t('Current period')}>{currentPeriod}</Block>
       )}
+      <HideDestructiveElements>
       <Block title={t('My current task')}>
         <CurrentTask
           epoch={epoch.epoch}
@@ -281,6 +287,7 @@ function ActionPanel() {
           identity={identity}
         />
       </Block>
+      </HideDestructiveElements>
       {currentPeriod === EpochPeriod.None && (
         <Block title={t('Next validation')}>
           {new Date(nextValidation).toLocaleString()}
@@ -536,6 +543,7 @@ export function Version() {
             Updating Node...
           </Text>
         )}
+        <HideDestructiveElements>
         {autoUpdate.canUpdateClient ? (
           <UpdateButton
             text="Update Client Version"
@@ -553,6 +561,7 @@ export function Version() {
             onClick={updateNode}
           />
         ) : null}
+        </HideDestructiveElements>
       </Box>
     </>
   )

@@ -1,3 +1,4 @@
+import HideDestructiveElements from '../../shared/nondestructive'
 import React from 'react'
 import PropTypes from 'prop-types'
 import {useRouter} from 'next/router'
@@ -14,6 +15,7 @@ function SettingsLayout({children}) {
   return (
     <Layout skipHardForkScreen>
       <Box px={theme.spacings.xxxlarge} py={theme.spacings.large}>
+        <HideDestructiveElements>
         <Box>
           <PageTitle>{t('Settings')}</PageTitle>
           {/* TODO: make it shared <Pill /> or <Tab /> component */}
@@ -26,6 +28,7 @@ function SettingsLayout({children}) {
             </FlipFilterOption>
           </FlipFilter>
         </Box>
+        </HideDestructiveElements>
         {children}
       </Box>
     </Layout>
