@@ -1,10 +1,10 @@
 {
   // turn it off for JS and JSX, we will do this via eslint
   "[javascript]": {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": false
   },
   "[javascriptreact]": {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": false
   },
-  "editor.formatOnSave": true
+  "editor.formatOnSave": false
 }
