@@ -33,7 +33,6 @@ import {
 } from '@chakra-ui/core'
 import {DragDropContext, Droppable, Draggable} from 'react-beautiful-dnd'
 import {useTranslation} from 'react-i18next'
-import dayjs from 'dayjs'
 import {transparentize} from 'polished'
 import {useService} from '@xstate/react'
 import FlipEditor from './components/flip-editor'
@@ -126,7 +125,7 @@ export function FlipCard({flipService, onDelete}) {
               : t('Missing keywords')}
           </FlipCardTitle>
           <FlipCardSubtitle>
-            {dayjs(createdAt).format('D.MM.YYYY, H:mm')}
+            {new Date(createdAt).toLocaleString()}
           </FlipCardSubtitle>
         </Box>
         {isActionable && (
@@ -1242,7 +1241,7 @@ export function CommunityTranslationUnavailable() {
   )
 }
 
-export function DeleteFlipDrawer({hash, cover, onDelete, ...props}) {
+export function DeleteFlipDrawer({hash, cover, isMissing, onDelete, ...props}) {
   const {t} = useTranslation()
   return (
     <Drawer {...props}>
@@ -1262,9 +1261,11 @@ export function DeleteFlipDrawer({hash, cover, onDelete, ...props}) {
         </Heading>
       </DrawerHeader>
       <DrawerBody>
-        <Text color="brandGray.500" fontSize="md">
-          {t('Deleted flip will be moved to the drafts.')}
-        </Text>
+        {!isMissing && (
+          <Text color="brandGray.500" fontSize="md">
+            {t('Deleted flip will be moved to the drafts.')}
+          </Text>
+        )}
         <FlipImage
           src={cover}
           size={160}

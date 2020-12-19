@@ -1,6 +1,6 @@
 import {Machine, assign} from 'xstate'
 import {decode} from 'rlp'
-import {log} from 'xstate/lib/actions'
+import {choose, log, send} from 'xstate/lib/actions'
 import dayjs from 'dayjs'
 import {
   fetchFlipHashes,
@@ -24,6 +24,7 @@ import {
   shouldTranslate,
   shouldPollLongFlips,
   readyFlip,
+  availableReportsNumber,
 } from './utils'
 import {forEachAsync, wait} from '../../shared/utils/fn'
 import {fetchConfirmedKeywordTranslations} from '../flips/utils'
@@ -51,6 +52,7 @@ export const createValidationMachine = ({
         retries: 0,
         locale,
         translations: {},
+        reportedFlipsCount: 0,
       },
       states: {
         shortSession: {
@@ -793,18 +795,40 @@ export const createValidationMachine = ({
                           ],
                         },
                         TOGGLE_WORDS: {
+                          actions: ['toggleKeywords', log()],
+                        },
+                        SUBMIT: 'review',
+                        PICK_INDEX: {
                           actions: [
-                            assign({
-                              longFlips: ({longFlips}, {hash, relevance}) =>
-                                mergeFlipsByHash(longFlips, [
-                                  {hash, relevance},
-                                ]),
-                            }),
-                            log(),
+                            send((_, {index}) => ({
+                              type: 'PICK',
+                              index,
+                            })),
                           ],
                         },
-                        SUBMIT: {
-                          target: 'submitLongSession',
+                      },
+                    },
+                    review: {
+                      on: {
+                        CHECK_FLIPS: {
+                          target: 'keywords',
+                          actions: [
+                            send((_, {index}) => ({
+                              type: 'PICK_INDEX',
+                              index,
+                            })),
+                          ],
+                        },
+                        CHECK_REPORTS: 'keywords',
+                        SUBMIT: 'submitLongSession',
+                        CANCEL: {
+                          target: 'keywords',
+                          actions: [
+                            send(({currentIndex}) => ({
+                              type: 'PICK_INDEX',
+                              index: currentIndex,
+                            })),
+                          ],
                         },
                       },
                     },
@@ -889,7 +913,7 @@ export const createValidationMachine = ({
         },
         validationSucceeded: {
           type: 'final',
-          entry: log('VALIDATION SUCCEEDED'),
+          entry: ['onValidationSucceeded', log('VALIDATION SUCCEEDED')],
         },
       },
     },
@@ -905,7 +929,8 @@ export const createValidationMachine = ({
         fetchLongFlips: ({longFlips}) => cb =>
           fetchFlips(
             longFlips.filter(readyNotFetchedFlip).map(({hash}) => hash),
-            cb
+            cb,
+            1000
           ),
         // eslint-disable-next-line no-shadow
         fetchTranslations: ({longFlips, currentIndex, locale}) =>
@@ -947,6 +972,63 @@ export const createValidationMachine = ({
           ) * 1000,
       },
       actions: {
+        toggleKeywords: choose([
+          {
+            cond: ({longFlips}, {hash, relevance}) =>
+              // eslint-disable-next-line no-use-before-define
+              relevance === RelevanceType.Relevant &&
+              !longFlips.find(x => x.hash === hash)?.relevance,
+            actions: [
+              assign({
+                longFlips: ({longFlips}, {hash, relevance}) =>
+                  mergeFlipsByHash(longFlips, [{hash, relevance}]),
+              }),
+            ],
+          },
+          {
+            cond: ({longFlips}, {hash, relevance}) =>
+              // eslint-disable-next-line no-use-before-define
+              relevance === RelevanceType.Relevant &&
+              longFlips.find(x => x.hash === hash)?.relevance ===
+                // eslint-disable-next-line no-use-before-define
+                RelevanceType.Irrelevant,
+            actions: [
+              assign({
+                longFlips: ({longFlips}, {hash, relevance}) =>
+                  mergeFlipsByHash(longFlips, [{hash, relevance}]),
+                reportedFlipsCount: ({reportedFlipsCount}) =>
+                  reportedFlipsCount - 1,
+              }),
+              log(),
+            ],
+          },
+          {
+            cond: ({longFlips, reportedFlipsCount}, {relevance}) =>
+              // eslint-disable-next-line no-use-before-define
+              relevance === RelevanceType.Irrelevant &&
+              reportedFlipsCount < availableReportsNumber(longFlips),
+            actions: [
+              assign({
+                longFlips: ({longFlips}, {hash, relevance}) =>
+                  mergeFlipsByHash(longFlips, [{hash, relevance}]),
+                reportedFlipsCount: ({longFlips, reportedFlipsCount}, {hash}) =>
+                  longFlips.find(x => x.hash === hash)?.relevance ===
+                  // eslint-disable-next-line no-use-before-define
+                  RelevanceType.Irrelevant
+                    ? reportedFlipsCount
+                    : reportedFlipsCount + 1,
+              }),
+              log(),
+            ],
+          },
+          {
+            cond: ({longFlips, reportedFlipsCount}, {relevance}) =>
+              // eslint-disable-next-line no-use-before-define
+              relevance === RelevanceType.Irrelevant &&
+              reportedFlipsCount >= availableReportsNumber(longFlips),
+            actions: ['onExceededReports', log()],
+          },
+        ]),
         cleanupShortFlips: ({shortFlips}) => {
           filterSolvableFlips(shortFlips).forEach(({images}) =>
             images.forEach(URL.revokeObjectURL)
@@ -992,7 +1074,7 @@ export const createValidationMachine = ({
     }
   )
 
-function fetchFlips(hashes, cb) {
+function fetchFlips(hashes, cb, delay = 0) {
   global.logger.debug(`Calling flip_get rpc for hashes`, hashes)
   return forEachAsync(hashes, hash =>
     fetchFlip(hash)
@@ -1008,6 +1090,7 @@ function fetchFlips(hashes, cb) {
           },
         })
       })
+      .then(() => (delay > 0 ? wait(delay) : Promise.resolve()))
       .catch(() => {
         global.logger.debug(`Catch flip_get reject`, hash)
         cb({

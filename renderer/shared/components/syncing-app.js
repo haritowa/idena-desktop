@@ -72,11 +72,13 @@ export default function SyncingApp() {
 }
 
 function SyncingIdentity() {
-  const {currentBlock, highestBlock, wrongTime} = useChainState()
+  const {currentBlock, highestBlock, genesisBlock, wrongTime} = useChainState()
   const {address} = useIdentityState()
   const [{result: peers}] = usePoll(useRpc('net_peers'), 1000)
 
   const {t} = useTranslation()
+
+  const startingBlock = genesisBlock || 0
 
   return (
     <section>
@@ -90,18 +92,33 @@ function SyncingIdentity() {
       <section>
         <h2>{t('Synchronizing blocks')}</h2>
         <div>
-          <h3>
-            {t('{{currentBlock}} out of {{highestBlock}}', {
-              currentBlock,
-              highestBlock,
-            })}
-          </h3>
+          {highestBlock ? (
+            <h3>
+              {t('{{numBlocks}} blocks left', {
+                numBlocks: highestBlock - currentBlock,
+              })}{' '}
+              (
+              {t('{{currentBlock}} out of {{highestBlock}}', {
+                currentBlock,
+                highestBlock: highestBlock || '...',
+              })}
+              )
+            </h3>
+          ) : (
+            <h3>
+              {t('{{currentBlock}} out of {{highestBlock}}', {
+                currentBlock,
+                highestBlock: '...',
+              })}
+            </h3>
+          )}
           <div>
             <span>{t('Peers connected')}:</span> {(peers || []).length}
           </div>
         </div>
         <Progress
           value={currentBlock}
+          min={startingBlock}
           max={highestBlock}
           rounded="2px"
           bg="xblack.016"
@@ -150,7 +167,7 @@ function SyncingIdentity() {
         }
         section:nth-child(2) > div {
           display: flex;
-          align-items: center;
+          align-items: flex-end;
           justify-content: space-between;
         }
         section:nth-child(2) > div > div {

@@ -22,13 +22,18 @@ import {
   Stack,
   Text,
   Heading,
+  Icon,
+  Alert,
+  AlertIcon,
+  Button,
+  useTheme,
 } from '@chakra-ui/core'
 import {useMachine} from '@xstate/react'
-import {useTranslation} from 'react-i18next'
+import {Trans, useTranslation} from 'react-i18next'
 import dayjs from 'dayjs'
 import {useRouter} from 'next/router'
 import {State} from 'xstate'
-import {Box, Fill, Button, Absolute} from '../../shared/components'
+import {Box, Fill, Absolute} from '../../shared/components'
 import Flex from '../../shared/components/flex'
 import {reorderList} from '../../shared/utils/arr'
 import theme, {rem} from '../../shared/theme'
@@ -48,7 +53,7 @@ import {
   DialogBody,
   DialogFooter,
 } from '../../shared/components/components'
-import {PrimaryButton} from '../../shared/components/button'
+import {PrimaryButton, SecondaryButton} from '../../shared/components/button'
 
 export function ValidationScene(props) {
   return (
@@ -409,7 +414,12 @@ export function Thumbnail({
             height={32}
             width={32}
             fit="cover"
-            style={{borderRadius: rem(12)}}
+            style={{
+              borderRadius: rem(12),
+              border: isCurrent
+                ? 'transparent'
+                : 'solid 1px rgb(83 86 92 /0.16)',
+            }}
           />
         </>
       )}
@@ -507,14 +517,7 @@ export function FlipWords({
 
   return (
     <ChakraBox fontSize="md" color="brandGray.500" ml={rem(32)} w={rem(320)}>
-      <FlipKeywordPanel w={rem(320)} mb={5}>
-        <Heading
-          fontSize={rem(16)}
-          fontWeight={500}
-          style={{...margin(0, 0, rem(24))}}
-        >
-          {t(`Are both keywords relevant to the flip?`)}
-        </Heading>
+      <FlipKeywordPanel w={rem(320)} mb={8}>
         {words.length ? (
           <FlipKeywordTranslationSwitch
             keywords={{
@@ -562,59 +565,23 @@ export function FlipWords({
 }
 
 export function QualificationActions(props) {
-  return <Flex align="center" justify="space-between" {...props} />
+  return <Stack isInline spacing={2} align="center" {...props} />
 }
 
-export function QualificationButton({
-  flip: {hash, relevance},
-  variant,
-  children,
-  onVote,
-  ...props
-}) {
-  const buttonVariant =
-    // eslint-disable-next-line no-nested-ternary
-    variant === RelevanceType.Relevant
-      ? relevance === variant
-        ? 'primary'
-        : 'secondary'
-      : null
-  const style =
-    // eslint-disable-next-line no-nested-ternary
-    variant === RelevanceType.Irrelevant
-      ? relevance === variant
-        ? {
-            backgroundColor: theme.colors.danger,
-            color: theme.colors.white,
-          }
-        : {
-            backgroundColor: theme.colors.danger02,
-            color: theme.colors.danger,
-          }
-      : null
-  return (
-    <Button
-      variant={buttonVariant}
-      style={{
-        fontWeight: 500,
-        minWidth: rem(156),
-        minHeight: rem(32),
-        transition: 'none',
-        whiteSpace: 'nowrap',
-        zIndex: 1,
-        ...style,
-      }}
-      onClick={() => onVote(hash)}
-      {...props}
-    >
-      <Stack isInline spacing={2} align="center" justify="center">
-        {React.Children.map(children, child => (
-          <ChakraBox>{child}</ChakraBox>
-        ))}
-      </Stack>
-    </Button>
-  )
-}
+// eslint-disable-next-line react/display-name
+export const QualificationButton = React.forwardRef(
+  ({isSelected, children, ...props}, ref) => {
+    const ButtonVariant = isSelected ? PrimaryButton : SecondaryButton
+    return (
+      <ButtonVariant ref={ref} flex={1} maxW={40} {...props}>
+        <Stack isInline spacing={2} align="center" justify="center">
+          {isSelected && <Icon name="tick" size={5} />}
+          <Text>{children}</Text>
+        </Stack>
+      </ButtonVariant>
+    )
+  }
+)
 
 export function WelcomeQualificationDialog(props) {
   const {t} = useTranslation()
@@ -642,6 +609,7 @@ export function WelcomeQualificationDialog(props) {
 
 export function NavButton({type, bg, color, ...props}) {
   const isPrev = type === 'prev'
+  // eslint-disable-next-line no-shadow
   const Icon = isPrev ? FiChevronLeft : FiChevronRight
   return (
     <Absolute
@@ -776,29 +744,6 @@ export function SubmitFailedDialog(props) {
       <DialogBody>
         <Text>{t('An error occured while submitting your answers.')}</Text>
       </DialogBody>
-    </ValidationDialog>
-  )
-}
-
-export function ValidationSucceededDialog(props) {
-  const {t} = useTranslation()
-  return (
-    <ValidationDialog
-      title={t('Wait for validation results')}
-      submitText={t('Go to My Idena')}
-      {...props}
-    >
-      <ValidationDialogBody>
-        <Text>
-          {t(`Your answers for the qualification session have been submited
-          successfully!`)}
-        </Text>
-        <Text>
-          {t(`Please wait for the validation results. It will take some time for
-          network to reach consensus about the list of validated accounts. You
-          can find the validation end time on the left panel.`)}
-        </Text>
-      </ValidationDialogBody>
     </ValidationDialog>
   )
 }
@@ -1001,3 +946,134 @@ function ValidationSpinner({size = 30}) {
     </div>
   )
 }
+
+export function ReviewValidationDialog({
+  flips,
+  reportedFlipsCount,
+  availableReportsCount,
+  isSubmitting,
+  onSubmit,
+  onMisingAnswers,
+  onMisingReports,
+  onCancel,
+  ...props
+}) {
+  const {t} = useTranslation()
+
+  const answeredFlipsCount = flips.filter(({option}) => option > 0).length
+
+  const areFlipsUnanswered = answeredFlipsCount < flips.length
+  const areReportsMissing = reportedFlipsCount < availableReportsCount
+
+  return (
+    <Dialog title={t('Submit the answers')} onClose={onCancel} {...props}>
+      <ValidationDialogBody>
+        <Stack spacing={6}>
+          <Stack spacing={4}>
+            <Stack spacing={2}>
+              <ReviewValidationDialog.Stat
+                label={t('Answered')}
+                value={t('{{answeredFlips}} out of {{totalFlips}}', {
+                  answeredFlips: answeredFlipsCount,
+                  totalFlips: flips.length,
+                })}
+              />
+              <ReviewValidationDialog.Stat
+                label={t('Flips reported')}
+                value={t(
+                  '{{reportedFlipsCount}} out of {{availableReportsCount}}',
+                  {
+                    reportedFlipsCount,
+                    availableReportsCount,
+                  }
+                )}
+              />
+            </Stack>
+            {(areFlipsUnanswered || areReportsMissing) && (
+              <Text color="muted">
+                {areFlipsUnanswered && (
+                  <Trans i18nKey="reviewMissingFlips" t={t}>
+                    You need to answer{' '}
+                    <ReviewValidationDialog.LinkButton
+                      onClick={onMisingAnswers}
+                    >
+                      all flips
+                    </ReviewValidationDialog.LinkButton>{' '}
+                    otherwise you may fail the validation.
+                  </Trans>
+                )}{' '}
+                {areReportsMissing && (
+                  <Trans i18nKey="reviewMissingReports" t={t}>
+                    In order to get maximum rewards use{' '}
+                    <ReviewValidationDialog.LinkButton
+                      variant="link"
+                      onClick={onMisingReports}
+                    >
+                      all available reports
+                    </ReviewValidationDialog.LinkButton>
+                    for the worst flips.
+                  </Trans>
+                )}
+              </Text>
+            )}
+          </Stack>
+          {areReportsMissing && (
+            <Alert
+              status="error"
+              bg="red.010"
+              borderWidth="1px"
+              borderColor="red.050"
+              fontWeight={500}
+              rounded="md"
+              px={3}
+              py={2}
+            >
+              <AlertIcon name="info" color="red.500" size={5} mr={3} />
+              {t('You may lose rewards. Are you sure?')}
+            </Alert>
+          )}
+        </Stack>
+      </ValidationDialogBody>
+      <DialogFooter {...props}>
+        <SecondaryButton onClick={onCancel}>{t('Cancel')}</SecondaryButton>
+        <PrimaryButton
+          isLoading={isSubmitting}
+          loadingText={t('Submitting answers...')}
+          onClick={onSubmit}
+        >
+          {t('Submit answers')}
+        </PrimaryButton>
+      </DialogFooter>
+    </Dialog>
+  )
+}
+
+function ReviewValidationDialogStat({label, value, ...props}) {
+  return (
+    <Flex justify="space-between" {...props}>
+      <Text color="muted">{label}</Text>
+      <Text>{value}</Text>
+    </Flex>
+  )
+}
+ReviewValidationDialog.Stat = ReviewValidationDialogStat
+
+function ReviewValidationDialogLinkButton(props) {
+  const {colors} = useTheme()
+  return (
+    <Button
+      variant="link"
+      color="muted"
+      fontWeight="normal"
+      verticalAlign="baseline"
+      borderColor="red.500"
+      textDecoration={`underline ${colors.muted}`}
+      _hover={{
+        color: 'brandGray.500',
+      }}
+      _focus={null}
+      {...props}
+    />
+  )
+}
+ReviewValidationDialog.LinkButton = ReviewValidationDialogLinkButton

@@ -1,8 +1,15 @@
 import HideDestructiveElements from '../shared/nondestructive'
 import React from 'react'
-import {Stack, Box, Text, Icon, useDisclosure, useToast} from '@chakra-ui/core'
+import {
+  Stack,
+  Box,
+  Text,
+  Icon,
+  useDisclosure,
+  useToast,
+  Button,
+} from '@chakra-ui/core'
 import {useTranslation} from 'react-i18next'
-import dayjs from 'dayjs'
 import {
   useIdentityState,
   mapToFriendlyStatus,
@@ -107,7 +114,35 @@ export default function ProfilePage() {
               <UserInlineCard address={address} state={state} />
               <HideDestructiveElements>
               <UserStatList>
-                <SimpleUserStat label={t('Address')} value={address} />
+                <UserStat>
+                  <UserStatLabel>{t('Address')}</UserStatLabel>
+                  <UserStatValue>{address}</UserStatValue>
+                  <Button
+                    variant="link"
+                    variantColor="brandBlue"
+                    fontWeight={500}
+                    alignSelf="flex-start"
+                    _hover={{background: 'transparent'}}
+                    _focus={{
+                      outline: 'none',
+                    }}
+                    onClick={() => {
+                      global.openExternal(
+                        `https://scan.idena.io/address/${address}`
+                      )
+                    }}
+                  >
+                    <Text as="span" lineHeight="short" mt="-2px">
+                      {t('Open in blockchain explorer')}
+                    </Text>
+                    <Icon
+                      name="chevron-down"
+                      size={4}
+                      transform="rotate(-90deg)"
+                    />
+                  </Button>
+                </UserStat>
+
                 {state === IdentityStatus.Newbie ? (
                   <AnnotatedUserStat
                     annotation={t(
@@ -122,10 +157,8 @@ export default function ProfilePage() {
                     value={mapToFriendlyStatus(state)}
                   />
                 )}
-                <UserStat>
-                  <UserStatLabel>{t('Balance')}</UserStatLabel>
-                  <UserStatValue>{toDna(balance)}</UserStatValue>
-                </UserStat>
+
+                <SimpleUserStat label={t('Balance')} value={toDna(balance)} />
                 {stake > 0 && state === IdentityStatus.Newbie && (
                   <Stack spacing={4}>
                     <AnnotatedUserStat
@@ -158,19 +191,19 @@ export default function ProfilePage() {
                 {penalty > 0 && (
                   <AnnotatedUserStat
                     annotation={t(
-                      "Your node was offline more than 1 hour. The penalty will be charged automaically. Once it's fully paid you'll continue to mine coins."
+                      "Your node was offline more than 1 hour. The penalty will be charged automatically. Once it's fully paid you'll continue to mine coins."
                     )}
                     label={t('Mining penalty')}
                     value={toDna(penalty)}
                   />
                 )}
 
-                {age > 0 && <SimpleUserStat label="Age" value={age} />}
+                {age > 0 && <SimpleUserStat label={t('Age')} value={age} />}
 
                 {epoch && (
                   <SimpleUserStat
                     label={t('Next validation')}
-                    value={dayjs(epoch.nextValidation).toString()}
+                    value={new Date(epoch.nextValidation).toLocaleString()}
                   />
                 )}
 
@@ -180,8 +213,12 @@ export default function ProfilePage() {
                     label={t('Total score')}
                   >
                     <UserStatValue>
-                      {totalShortFlipPoints} out of {totalQualifiedFlips} (
-                      {toPercent(totalShortFlipPoints / totalQualifiedFlips)})
+                      {Math.min(totalShortFlipPoints, totalQualifiedFlips)} out
+                      of {totalQualifiedFlips} (
+                      {toPercent(
+                        Math.min(totalShortFlipPoints / totalQualifiedFlips, 1)
+                      )}
+                      )
                     </UserStatValue>
                   </AnnotatedUserStat>
                 )}
@@ -203,7 +240,7 @@ export default function ProfilePage() {
                 <IconLink
                   href="/contacts/new-invite"
                   isDisabled={invitesCount === 0}
-                  icon="add-user"
+                  icon={<Icon name="add-user" size={5} />}
                 >
                   {t('Invite')}
                 </IconLink>

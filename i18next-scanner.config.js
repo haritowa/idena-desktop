@@ -19,10 +19,12 @@ const AVAILABLE_LANGS = [
   'tr',
   'bg',
   'sv',
+  'ja',
 ]
 
 module.exports = {
   input: [
+    'main/**/*.{js,jsx}',
     'renderer/**/*.{js,jsx}',
     '!**/renderer/out/**',
     '!**/renderer/.next/**',

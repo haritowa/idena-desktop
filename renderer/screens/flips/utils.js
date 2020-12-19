@@ -1,6 +1,7 @@
 import {encode} from 'rlp'
 import axios from 'axios'
 import Jimp from 'jimp'
+import dayjs from 'dayjs'
 import {loadPersistentStateValue, persistItem} from '../../shared/utils/persist'
 import {FlipType} from '../../shared/types'
 import {areSame, areEual} from '../../shared/utils/arr'
@@ -46,6 +47,18 @@ export function archiveFlips() {
   )
 }
 
+export const freshFlip = ({createdAt, modifiedAt = createdAt}) =>
+  dayjs().diff(modifiedAt, 'day') < 30
+
+export const outdatedFlip = ({createdAt, modifiedAt = createdAt}) =>
+  dayjs().diff(modifiedAt, 'day') >= 30
+
+export function handleOutdatedFlips() {
+  const {getFlips, saveFlips} = global.flipStore
+  const flips = getFlips()
+  if (flips.filter(outdatedFlip).length > 0) saveFlips(flips.filter(freshFlip))
+}
+
 export function markFlipsArchived(epoch) {
   const persistedState = loadPersistentStateValue('flipArchive', epoch)
   if (persistedState && persistedState.archived) return
@@ -55,45 +68,55 @@ export function markFlipsArchived(epoch) {
   })
 }
 
-function perm(maxValue) {
-  const permArray = new Array(maxValue)
-  for (let i = 0; i < maxValue; i += 1) {
-    permArray[i] = i
+const perm = arr => {
+  const ret = []
+  for (let i = 0; i < arr.length; i += 1) {
+    const rest = perm(arr.slice(0, i).concat(arr.slice(i + 1)))
+    if (!rest.length) {
+      ret.push([arr[i]])
+    } else {
+      for (let j = 0; j < rest.length; j += 1) {
+        ret.push([arr[i]].concat(rest[j]))
+      }
+    }
   }
-  for (let i = maxValue - 1; i >= 0; i -= 1) {
-    const randPos = Math.floor(i * Math.random())
-    const tmpStore = permArray[i]
-    permArray[i] = permArray[randPos]
-    permArray[randPos] = tmpStore
-  }
-  return permArray
+  return ret
 }
 
-function shufflePics(pics, shuffledOrder, seed) {
+const randomNumber = () => {
+  const buf = new Uint32Array(1)
+  window.crypto.getRandomValues(buf)
+  return buf[0]
+}
+
+const randomPerm = arr => {
+  const output = perm(arr)
+  return output[randomNumber() % output.length]
+}
+
+function shufflePics(pics, shuffledOrder) {
+  const seed = randomPerm(DEFAULT_FLIP_ORDER)
   const newPics = []
-  const cache = {}
   const firstOrder = new Array(FLIP_LENGTH)
 
   seed.forEach((value, idx) => {
     newPics.push(pics[value])
-    if (value < FLIP_LENGTH) firstOrder[value] = idx
-    cache[value] = newPics.length - 1
+    firstOrder[value] = idx
   })
 
-  const secondOrder = shuffledOrder.map(value => cache[value])
+  const secondOrder = shuffledOrder.map(value => firstOrder[value])
 
   return {
     pics: newPics,
     orders:
-      Math.random() < 0.5
+      randomNumber() % 2 === 0
         ? [firstOrder, secondOrder]
         : [secondOrder, firstOrder],
   }
 }
 
 export function flipToHex(pics, order) {
-  const seed = perm(FLIP_LENGTH)
-  const shuffled = shufflePics(pics, order, seed)
+  const shuffled = shufflePics(pics, order)
 
   const publicRlp = encode([
     shuffled.pics
@@ -117,6 +140,18 @@ export function flipToHex(pics, order) {
 export function updateFlipType(flips, {id, type}) {
   return flips.map(flip =>
     flip.id === id
+      ? {
+          ...flip,
+          type,
+          ref: flip.ref,
+        }
+      : flip
+  )
+}
+
+export function updateFlipTypeByHash(flips, {hash, type}) {
+  return flips.map(flip =>
+    flip.hash === hash
       ? {
           ...flip,
           type,
